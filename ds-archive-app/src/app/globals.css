@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@layer components{
+  body {
+    @apply h-full min-h-dvh flex flex-row bg-linear-to-r from-blue-950/20 to-purple-600/20 overscroll-contain;
+  }
+  #main {
+    @apply grow h-full min-h-dvh  bg-black/50;
+  }
+}
+
+@theme {
+  --font-oxanium: "Oxanium", sans-serif;
+}
+
+html {
+  inset: 0;
+  z-index: 0;
+  background-color: black;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      rgba(168, 85, 247, 0.15) 19px,
+      rgba(168, 85, 247, 0.15) 20px,
+      transparent 20px,
+      transparent 39px,
+      rgba(168, 85, 247, 0.15) 39px,
+      rgba(168, 85, 247, 0.15) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      rgba(168, 85, 247, 0.15) 19px,
+      rgba(168, 85, 247, 0.15) 20px,
+      transparent 20px,
+      transparent 39px,
+      rgba(168, 85, 247, 0.15) 39px,
+      rgba(168, 85, 247, 0.15) 40px
+    ),
+    radial-gradient(circle at 20px 20px, rgba(147, 51, 234, 0.18) 2px, transparent 2px),
+    radial-gradient(circle at 40px 40px, rgba(147, 51, 234, 0.18) 2px, transparent 2px);
+  background-size: 40px 40px, 40px 40px, 40px 40px, 40px 40px;
+}
