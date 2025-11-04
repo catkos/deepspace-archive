@@ -1,5 +1,8 @@
 import express from "express";
-import { router as memoryrouter } from "./routes/memory-route.js";
+import { router as memoryrouter } from "./routes/memories-route.js";
+import { router as characterrouter } from "./routes/characters-route.js";
+import { router as outfitrouter } from "./routes/outfits-route.js";
+import { router as eventrouter } from "./routes/events-route.js";
 import cors from "cors";
 import { connectDB } from "./mongodb.js";
 
@@ -32,7 +35,13 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.use("/memory", memoryrouter);
+app.use("/memories", memoryrouter);
+
+app.use("/characters", characterrouter);
+
+app.use("/outfits", outfitrouter);
+
+app.use("/events", eventrouter);
 
 connectDB().then(() => {
   app.listen(port, () => {

@@ -15,47 +15,31 @@ const filterConfig = {
 
 // test
 router.get("/data", (req, res) => {
-  res.json({ message: "Memory route working" });
+  res.json({ message: "Character route working" });
 });
 
 router.post("/create", async (req, res) => {
   try {
-    const col = db.collection("memories");
+    const col = db.collection("characters");
 
     const data = req.body;
 
-    const pairedId =
-      data.pairedSolarId && data.pairedSolarId !== ""
-        ? ObjectId.createFromHexString(data.pairedSolarId)
-        : null;
-
     const collectionData = {
       name: data.name,
-      character: data.character,
-      rarity: data.rarity,
-      stellactrum: data.stellactrum,
-      time: data.time,
-      pairedSolarId: pairedId,
-      talent: data.talent,
-      stats: data.stats,
-      releaseDate: data.releaseDate ? new Date(data.releaseDate) : null,
-      dateAdded: new Date(),
+      age: data.age || null,
+      height: data.height || null,
+      birthday: data.birthday ? new Date(data.birthday) : null,
+      sign: data.sign || "",
+      job: data.job || "",
+      evol: data.evol || "",
+      description: data.description || "",
+      imageUrl: data.imageUrl || null,
+      dateAdded: new Date(), // Automatically set when inserted
     };
 
     const result = await col.insertOne(collectionData);
-    const newId = result.insertedId;
 
-    // if the new memory was paired, update the existing one to point back
-    if (data.pairedSolarId && data.time === 0) {
-      await col.updateOne(
-        { _id: pairedId },
-        { $set: { pairedSolarId: newId } }
-      );
-    } else if (data.pairedSolarId && data.time === 1) {
-      throw new Error("Lunar memories cannot have a pairedSolarId");
-    }
-
-    console.log("Memory inserted", collectionData);
+    console.log("Character inserted", collectionData);
 
     res.status(201).json({
       success: true,
@@ -71,7 +55,7 @@ router.post("/create", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const col = db.collection("memories");
+    const col = db.collection("characters");
 
     const filter = {};
     Object.entries(filterConfig).forEach(([field, type]) => {
