@@ -1,6 +1,6 @@
-type CharacterName = "Xavier" | "Rafayel" | "Zayne" | "Sylus" | "Caleb";
+export type CharacterId = string; // MongoDB ObjectId as string
 
-type StellactrumType =
+export type StellactrumType =
   | "Emerald"
   | "Amber"
   | "Ruby"
@@ -8,9 +8,9 @@ type StellactrumType =
   | "Violet"
   | "Pearl";
 
-type TimeType = 0 | 1;
+export type TimeType = 0 | 1;
 
-type StatBlock = {
+export type StatBlock = {
   baseDefault: number;
   maxDefault?: number;
   maxRank1?: number;
@@ -18,14 +18,17 @@ type StatBlock = {
   maxRank3?: number;
 };
 
-type Memory = {
+export type Memory = {
   _id: string;
   name: string;
-  character: CharacterName;
+  characterId: CharacterId;
   rarity: number;
   stellactrum: StellactrumType;
-  time?: TimeType;
-  pairedSolarId?: string | null;
+  time: TimeType;
+  pairMemoryId?: string | null;
+  pairBonusId?: string | null;
+  flavorText?: string;
+  obtain: string[];
   talent: string;
   stats: {
     hp: StatBlock;
@@ -34,6 +37,7 @@ type Memory = {
     critDmg: StatBlock;
   };
   releaseDate?: string;
-  createdAt?: string;
+  dateAdded?: string;
   imageUrl?: string;
+  characterName: string;
 };

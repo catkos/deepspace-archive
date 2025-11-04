@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Memory } from "@/lib/types";
 
 type MemoriesClientProps = {
   initialMemories: Memory[];
@@ -17,7 +18,7 @@ const characterIcon: Record<string, string> = {
 export default function MemoriesClient({
   initialMemories,
 }: MemoriesClientProps) {
-  const [memories, setMemories] = useState(initialMemories);
+  const [memories, setMemories] = useState(initialMemories || []);
   const [filters, setFilters] = useState({
     character: "",
     rarity: "",
@@ -25,26 +26,120 @@ export default function MemoriesClient({
     time: "",
   });
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observerTarget = useRef(null);
 
+  // Fetch memories with pagination
+  const fetchMemories = useCallback(
+    async (page: number, reset = false) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+
+        // Add filters
+        Object.entries(filters).forEach(([key, val]) => {
+          if (val) params.append(key, val);
+        });
+
+        // Add pagination
+        params.append("page", page.toString());
+        params.append("limit", "12");
+
+        const response = await fetch(
+          `http://localhost:8000/memories?${params.toString()}`
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          setMemories((prev) => (reset ? data.data : [...prev, ...data.data]));
+          setHasMore(data.pagination.hasNextPage);
+        }
+      } catch (error) {
+        console.error("Error fetching memories:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters]
+  );
+
+  // Load more when scrolling
+  const loadMore = useCallback(() => {
+    if (hasMore && !loading) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  }, [hasMore, loading, currentPage]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Only trigger if visible AND not already loading AND has more data
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loading, loadMore]);
+
+  // Fetch when page changes
+  useEffect(() => {
+    if (currentPage === 1) return; // Skip initial load, use initialMemories
+
+    fetchMemories(currentPage, false);
+  }, [currentPage, fetchMemories]);
+
+  // Handle filter changes - reset to page 1
   const handleFilterChange = async (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     const newFilters = { ...filters, [name]: value };
     setFilters(newFilters);
+    setCurrentPage(1);
+    setHasMore(true);
 
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([key, val]) => {
       if (val) params.append(key, val);
     });
+    params.append("page", "1");
+    params.append("limit", "12");
 
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:8000/memory?${params.toString()}`
+        `http://localhost:8000/memories?${params.toString()}`
       );
+
+      // Debug: Check response status
+      if (!response.ok) {
+        console.error("Response not OK:", response.status, response.statusText);
+        const text = await response.text();
+        console.error("Response body:", text);
+        return;
+      }
+
       const data = await response.json();
-      setMemories(data.data);
+
+      if (data.success) {
+        setMemories(data.data);
+        setHasMore(data.pagination.hasNextPage);
+      }
     } catch (error) {
       console.error("Error fetching memories:", error);
     } finally {
@@ -107,24 +202,23 @@ export default function MemoriesClient({
             <option value="">All Time</option>
             <option value="0">Solar</option>
             <option value="1">Lunar</option>
-            {/* Add your time options */}
           </select>
         </div>
       </section>
 
       <section>
-        {loading && <div className="text-center py-8">Loading...</div>}
-
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full">
-          {memories.length === 0 ? (
+          {memories.length === 0 && !loading ? (
             <div className="col-span-full text-center text-gray-500 py-8">
               No cards found matching your criteria.
             </div>
           ) : (
-            memories.map((memory: Memory) => (
+            memories.map((memory: Memory, index: number) => (
               <Link
-                href={`/memories/${memory._id}`}
-                key={memory._id}
+                href={`/memories/${encodeURIComponent(
+                  memory.name.toLowerCase().replace(/\s+/g, "-")
+                )}`}
+                key={`${memory._id}-${index}`}
                 className="backdrop-blur-[1px] rounded-xl bg-black/40 shadow-lg flex flex-col h-full"
               >
                 {/* Card Image */}
@@ -152,9 +246,9 @@ export default function MemoriesClient({
                         >
                           <path
                             fill="#7e8162"
-                            fill-rule="evenodd"
+                            fillRule="evenodd"
                             d="M12.884 1.03L12 .146l-.884.884l-2.72 2.72H3.75v4.646l-2.72 2.72L.146 12l.884.884l2.72 2.72v4.646h4.646l2.72 2.72l.884.884l.884-.884l2.72-2.72h4.646v-4.646l2.72-2.72l.884-.884l-.884-.884l-2.72-2.72V3.75h-4.646zM9.798 5.884L12 3.682l2.202 2.202l.366.366h3.182v3.182l.366.366L20.318 12l-2.202 2.202l-.366.366v3.182h-3.182l-.366.366L12 20.318l-2.202-2.202l-.366-.366H6.25v-3.182l-.366-.366L3.682 12l2.202-2.202l.366-.366V6.25h3.182zM12 16a4 4 0 1 0 0-8a4 4 0 0 0 0 8"
-                            clip-rule="evenodd"
+                            clipRule="evenodd"
                           />
                         </svg>
                       ) : memory.time === 1 ? (
@@ -201,7 +295,7 @@ export default function MemoriesClient({
                               fill="#7e8162"
                               fillRule="evenodd"
                               d="M7.935.655c-.318-.873-1.552-.873-1.87 0L4.622 4.622L.655 6.065c-.873.318-.873 1.552 0 1.87l3.967 1.443l1.443 3.967c.318.873 1.552.873 1.87 0l1.443-3.967l3.967-1.443c.873-.318.873-1.552 0-1.87L9.378 4.622z"
-                              clip-rule="evenodd"
+                              clipRule="evenodd"
                             />
                           </svg>
                         </span>
@@ -209,9 +303,9 @@ export default function MemoriesClient({
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="">
-                        {characterIcon[memory.character] &&
-                          `${characterIcon[memory.character]} `}
-                        {memory.character}
+                        {characterIcon[memory.characterName] &&
+                          `${characterIcon[memory.characterName]} `}
+                        {memory.characterName}
                       </span>
                     </div>
 
@@ -243,6 +337,24 @@ export default function MemoriesClient({
             ))
           )}
         </div>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <p className="mt-2 text-white">Loading more memories...</p>
+          </div>
+        )}
+
+        {/* Scroll Observer Target - invisible div to trigger loading */}
+        <div ref={observerTarget} className="h-4" />
+
+        {/* End Message */}
+        {!hasMore && memories.length > 0 && (
+          <div className="text-center py-8 text-gray-400">
+            No more memories to load
+          </div>
+        )}
       </section>
     </>
   );
